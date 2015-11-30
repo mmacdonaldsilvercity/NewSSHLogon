@@ -9,17 +9,17 @@ Configure a new ssh logon for easy use.
   parameters following the options. 
   
   * If entered as positional parameters, all three are required. 
-  * If some or none are entered as options, then the user will 
-    prompted for any of the three that are missing.  
-  * In order to avoid prompts enter all three using either 
-    method, plus the '-p password' option. 
+  * If some or none are entered as options, then the user will prompted for any of the three that are missing.  
+  * In order to avoid prompts enter all three using either method, plus the '-p password' option. 
   
-   -s servername      name of server to be connnected to 
-   -a abbreviation    mnemonic for the server
-   -u userid          userid on the server
+  ## Options
   
-   -v                 verbose output
-   -d                 dry run, no real config of ssh
-   -h                 display this help information and exit
-   -p password        password on configured server 
+   * -s servername      name of server to be connnected to 
+   * -a abbreviation    mnemonic for the server
+   * -u userid          userid on the server
+  
+   * -v                 verbose output
+   * -d                 dry run, no real config of ssh
+   * -h                 display this help information and exit
+   * -p password        password on configured server 
 
