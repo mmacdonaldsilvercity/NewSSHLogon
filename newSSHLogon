@@ -1,8 +1,7 @@
 #  TODO: 
-#      test for pre-existing sname abbrv uid parms
-#        and if there, don't prompt
-#      ssh-keygen to discreet function
-#      complete dry run and verbose messages and logic
+#      testing of completed script
+#      revalidate message numbers
+#      ()
 #      install message/error handling function
 #        case based on message number, echos all in the 
 #        one place for readability
@@ -18,7 +17,7 @@ echo "Usage: newLogon.sh [OPTION]... [servername abbreviation userid]"
 echo "Configure a new ssh logon for easy use."
 echo " "
 echo "  The severname, abbreviation, and userid information can"
-echo "  be entered as follows on the command line or as positional "
+echo "  be entered on the command line or as positional "
 echo "  parameters following the options. "
 echo "  "
 echo "  * If entered as positional parameters, all three are required. "
@@ -64,6 +63,48 @@ function yesTest() {
 }
 
 # ----------------------------------------------------------- #
+function keygenTest() {
+
+#    keygenTest function: validates that ssh-keygen has been
+#        run prior to this execution by testing for existence
+#        of ~/.ssh/id_rsa
+#        If that file does not exist, then it asks the user 
+#        for permission to execute the command 
+	if [ -e ~/.ssh/id_rsa ]
+	then
+		if [ $verbose = 'yes' ]
+		then
+			echo "newLogon I004: You have run ssh-keygen, so you are set to go"
+		fi
+	else
+		if [ $verbose = 'yes' ]
+			then
+			echo "newLogon w001:  You have not run ssh-keygen.  If you wish to do so"
+			read -p "    now, enter 'Y': " goflag
+			yesTest 
+	
+	   	if [ $goflag = 'yes' ]
+	   	then
+	   		if [ $testing = 'no' ]
+	   		then
+					ssh-keygen
+				else		
+	      		echo "newLogon I005: Would have run keygen here, aborting now"
+	      		exit
+	      	fi
+	      else
+	      	echo "newLogon E004: No keygen run, aborting run now"
+	      	exit
+	      fi
+	   else
+	   	echo "newLogon E005: Aborting due to no ssh-keygen"
+	   	echo "    Run that command and then rerun this process"
+	   	exit
+	   fi
+	fi  
+}
+
+# ----------------------------------------------------------- #
 function loadSSHConfig() {
 
 #   loadSSHConfig function:  for readabiilty, separate load into
@@ -71,17 +112,17 @@ function loadSSHConfig() {
 #   No function input variables or output variables
 #   Function appends ~/.ssh/config with new logon parms
 
-	if [ verbose='yes' ]
+	if [ $verbose = 'yes' ]
 	then
 		echo '  Backing up orig to ~/.ssh/config~'
 	fi
-	if [ testing='no' ]
+	if [ $testing = 'no' ]
 	then
    	cp ~/.ssh/config ~/.ssh/config~
    else
    	echo "newLogon I001: Would have backed up config here"
    fi
-   if [ verbose='yes' ]
+   if [ $verbose = 'yes' ]
    then
    	echo '  Appending on to config file the following:'
    	echo "Host $abbrv" >> ~/.ssh/configx
@@ -91,20 +132,27 @@ function loadSSHConfig() {
    	less ~/.ssh/configx
    	echo " *** "
    fi
-   echo " You will now be asked for your password on the "
-   echo " newly configured ssh connection as ssh-copykey is run."
-   read -p " OK to continue? y or n: " goflag
    
-   yesTest
+   if [ $verbose = 'yes' ]
+   then
+   	echo " You will now be asked for your password on the "
+   	echo " newly configured ssh connection as ssh-copykey is run."
+   	read -p " OK to continue? y or n: " goflag
+   
+   	yesTest 
+   fi
    
    if [ $goflag = 'yes' ]
    then
-   	if [ testing='no' ]
+   	if [ $testing = 'no' ]
    	then
       	ssh-copy-id $uid\@$sname
       else
       	echo "newLogon I002: Would have executed: ssh-copy-id $uid@$sname "
 		fi
+	else
+		echo 'newLogon I006: requested halt run'
+		exit
    fi
 }
 
@@ -120,7 +168,7 @@ abbrv='blank'
 uid='blank'
 helpme='no'
 
-while getopts "hdvs:" arg
+while getopts "hdvs:u:" arg
 do
 	  echo "got the argument: $arg"
 	  
@@ -146,7 +194,7 @@ then
 	uid=$3
 	abbrv=$2
 	sname=$1
-	if [ verbose='yes' ]
+	if [ $verbose = 'yes' ]
 	then
 		echo "user id: $uid"
 		echo " abbrev: $abbrv"
@@ -154,7 +202,7 @@ then
 	fi
 elif [ $# = '0' ]
 then
-	if [ verbose='yes' ]
+	if [ $verbose = 'yes' ]
 	then
 		echo "newLogon I003: no positional parms entered"
 	fi
@@ -163,47 +211,50 @@ else
 	exit
 fi
 
-if [ -e ~/.ssh/id_rsa ]
-then
-	if [ verbose='yes' ]
-	then
-		echo "    You have run ssh-keygen, so you are set to go"
-	fi
-else
-	echo "    You have not run ssh-keygen.  If you wish to do so"
-	read -p "    now, enter 'Y': " goflag
-	yesTest 
+#   logic in keygenTest can result in exiting from process
+#   if no ssh-keygen has been run, and user elects to not
+#   run such
 
-   if [ $goflag = 'YES' ]
-   then
-#   	ssh-keygen
-      echo "Would have run keygen here"
-   fi
-fi  
+keygenTest
 
-#  TODO:  find correct format for empty/nonexistant variable
-if [ -s sname ]
+
+echo "server name init to: $sname"
+notAllParms='no'
+
+if [ $sname = 'blank' ] 
 then	
 	read -p "          Enter server name: " sname
 fi	
-read -p "         Enter abbreviation: " abbrv
-read -p "Enter the remote server uid: " uid
 
-echo "Following is the data to be added to ~/.ssh/config:"
+if [ $abbrv = 'blank' ]
+then
+	read -p "           Enter abbreviation: " abbrv
+fi
 
-echo "Host $abbrv" 
-echo "    Hostname $sname"
-echo "    User $uid"
+if [ $uid = 'blank' ]
+then
+	read -p "Enter the remote server uid: " uid
+fi
 
-read -p "--> OK? y or n: " goflag 
+goflag='yes'
 
-yesTest
+if [ $verbose = 'yes' ]
+then
+	echo "newLogon I006: Following is the data to be added to ~/.ssh/config:"
+
+	echo "			Host $abbrv" 
+	echo "    			Hostname $sname"
+	echo "    			User $uid"
+
+	read -p "--> OK? y or n: " goflag 
+	yesTest
+fi
 
 if [ $goflag = 'yes' ]
 then
+	echo " loadsshconfig goflag: $goflag "
 	loadSSHConfig    
 else
-    echo "Process Aborted, no changes made"
+    echo "newLogon W003: Process Aborted, no changes made "
+    exit
 fi
-
-
